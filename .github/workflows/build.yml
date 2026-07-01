@@ -88,7 +88,7 @@ jobs:
                 minSdk 28
                 targetSdk 34
                 versionCode 1
-                versionName "1.1.0"
+                versionName "1.1.1"
             }
             buildTypes {
                 release {
@@ -102,7 +102,7 @@ jobs:
         }
         EOF
 
-        # 5. Create AndroidManifest.xml with Dialer Roles and Activities
+        # 5. Create AndroidManifest.xml
         cat << 'EOF' > app/src/main/AndroidManifest.xml
         <?xml version="1.0" encoding="utf-8"?>
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -260,7 +260,7 @@ jobs:
         </LinearLayout>
         EOF
 
-        # 9. In-Call Layout UI (Calling View with Disconnect Button)
+        # 9. In-Call Layout UI
         cat << 'EOF' > app/src/main/res/layout/activity_in_call.xml
         <?xml version="1.0" encoding="utf-8"?>
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -305,7 +305,7 @@ jobs:
         </LinearLayout>
         EOF
 
-        # 10. CustomInCallService.java (Bridge that communicates between system hardware & App UI)
+        # 10. CustomInCallService.java
         cat << 'EOF' > app/src/main/java/com/example/vcdialer/CustomInCallService.java
         package com.example.vcdialer;
 
@@ -325,13 +325,11 @@ jobs:
                 super.onCallAdded(call);
                 currentCall = call;
                 
-                // Get the dialled string profile data safely
                 String number = "Unknown";
                 if (call.getDetails() != null && call.getDetails().getHandle() != null) {
                     number = call.getDetails().getHandle().getSchemeSpecificPart();
                 }
 
-                // Fire up the Native InCall Screen Layout right away
                 Intent intent = new Intent(this, InCallActivity.class);
                 intent.putExtra("NUMBER", number);
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -346,7 +344,7 @@ jobs:
         }
         EOF
 
-        # 11. InCallActivity.java (Controls the Active call session UI and Disconnection loops)
+        # 11. InCallActivity.java
         cat << 'EOF' > app/src/main/java/com/example/vcdialer/InCallActivity.java
         package com.example.vcdialer;
 
@@ -395,7 +393,7 @@ jobs:
                     @Override
                     public void onClick(View v) {
                         if (activeCall != null) {
-                            activeCall.disconnect(); // Instructs hardware modem layer to drop line immediately
+                            activeCall.disconnect();
                         }
                         finish();
                     }
@@ -425,7 +423,7 @@ jobs:
         }
         EOF
 
-        # 12. MainActivity.java (Standard Controller Launcher)
+        # 12. MainActivity.java
         cat << 'EOF' > app/src/main/java/com/example/vcdialer/MainActivity.java
         package com.example.vcdialer;
 
@@ -508,4 +506,16 @@ jobs:
                 Intent callIntent = new Intent(Intent.ACTION_CALL);
                 callIntent.setData(Uri.parse("tel:" + Uri.encode(phoneNumber)));
                 
-                if (ActivityCompat.check
+                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
+                    startActivity(callIntent);
+                } else {
+                    Toast.makeText(this, "Permission missing!", Toast.LENGTH_SHORT).show();
+                }
+            }
+        }
+        EOF
+
+        # 13. Setup Gradle Wrapper
+        gradle wrapper --gradle-version 8.4
+
+    - name: Grant Execu
