@@ -88,7 +88,7 @@ jobs:
                 minSdk 28
                 targetSdk 34
                 versionCode 1
-                versionName "1.0.2"
+                versionName "1.0.3"
             }
             buildTypes {
                 release {
@@ -102,7 +102,7 @@ jobs:
         }
         EOF
 
-        # 5. Create AndroidManifest.xml with Telephony System Bindings
+        # 5. Create AndroidManifest.xml
         cat << 'EOF' > app/src/main/AndroidManifest.xml
         <?xml version="1.0" encoding="utf-8"?>
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -181,11 +181,10 @@ jobs:
             <color name="bg_dark">#0F0E17</color>
             <color name="purple_neon">#A156FF</color>
             <color name="text_gray">#8E8C9A</color>
-            <color name="white">#FFFFFF</color>
-        </resources>
+            <color name="white">#FFFFFF</resources>
         EOF
 
-        # 8. Layout Design
+        # 8. FIXED Layout Design (Removed invalid attribute tags)
         cat << 'EOF' > app/src/main/res/layout/activity_main.xml
         <?xml version="1.0" encoding="utf-8"?>
         <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
@@ -217,7 +216,6 @@ jobs:
                     android:text="SET AS DEFAULT PHONE APP"
                     android:textColor="@color/white"
                     android:backgroundTint="@color/purple_neon"
-                    android:layout_bottom="20dp"
                     android:layout_marginBottom="20dp"
                     android:textStyle="bold"/>
 
@@ -282,7 +280,7 @@ jobs:
         </ScrollView>
         EOF
 
-        # 9. CustomInCallService.java - FIXES THE CALL ROUTING TO THE REAL CARRIER
+        # 9. CustomInCallService.java
         cat << 'EOF' > app/src/main/java/com/example/vcdialer/CustomInCallService.java
         package com.example.vcdialer;
 
@@ -294,12 +292,9 @@ jobs:
             @Override
             public void onCallAdded(Call call) {
                 super.onCallAdded(call);
-                
-                // CRITICAL FIX: Forces the Android OS state machine to route and execute the connection on the SIM network
                 if (call.getState() == Call.STATE_CONNECTING || call.getState() == Call.STATE_SELECT_PHONE_ACCOUNT) {
                     call.unhold(); 
                 }
-                
                 Toast.makeText(this, "Line Connected! Voice Bridge Routing Active.", Toast.LENGTH_SHORT).show();
             }
 
@@ -416,7 +411,6 @@ jobs:
             private void makeSystemCall(String phoneNumber) {
                 startVoiceChangerEngine();
                 
-                // Using active Telecom system integration rather than simple dial intents
                 Intent callIntent = new Intent(Intent.ACTION_CALL);
                 callIntent.setData(Uri.parse("tel:" + Uri.encode(phoneNumber)));
                 
