@@ -88,7 +88,7 @@ jobs:
                 minSdk 28
                 targetSdk 34
                 versionCode 1
-                versionName "1.0.3"
+                versionName "1.0.4"
             }
             buildTypes {
                 release {
@@ -174,17 +174,18 @@ jobs:
         </shape>
         EOF
 
-        # 7. Create Color Palette
+        # 7. Create Color Palette (FIXED: Tag properly closed here)
         cat << 'EOF' > app/src/main/res/values/colors.xml
         <?xml version="1.0" encoding="utf-8"?>
         <resources>
             <color name="bg_dark">#0F0E17</color>
             <color name="purple_neon">#A156FF</color>
             <color name="text_gray">#8E8C9A</color>
-            <color name="white">#FFFFFF</resources>
+            <color name="white">#FFFFFF</color>
+        </resources>
         EOF
 
-        # 8. FIXED Layout Design (Removed invalid attribute tags)
+        # 8. Layout Design
         cat << 'EOF' > app/src/main/res/layout/activity_main.xml
         <?xml version="1.0" encoding="utf-8"?>
         <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
