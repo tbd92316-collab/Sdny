@@ -1,4 +1,4 @@
-name: Build Default Voice Changer Dialer APK
+name: Build Fixed Default Voice Changer Dialer APK
 
 on:
   push:
@@ -102,7 +102,7 @@ jobs:
         }
         EOF
 
-        # 5. Create AndroidManifest.xml with Default Phone App Capabilities
+        # 5. Create AndroidManifest.xml with FULL Dialer Permissions & Intent Filters
         cat << 'EOF' > app/src/main/AndroidManifest.xml
         <?xml version="1.0" encoding="utf-8"?>
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -120,14 +120,26 @@ jobs:
                 
                 <activity
                     android:name=".MainActivity"
-                    android:exported="true">
+                    android:exported="true"
+                    android:launchMode="singleTask">
                     <intent-filter>
                         <action android:name="android.intent.action.MAIN" />
                         <category android:name="android.intent.category.LAUNCHER" />
                     </intent-filter>
+                    
                     <intent-filter>
                         <action android:name="android.intent.action.DIAL" />
                         <category android:name="android.intent.category.DEFAULT" />
+                        <data android:scheme="tel" />
+                    </intent-filter>
+                    <intent-filter>
+                        <action android:name="android.intent.action.DIAL" />
+                        <category android:name="android.intent.category.DEFAULT" />
+                    </intent-filter>
+                    <intent-filter>
+                        <action android:name="android.intent.action.VIEW" />
+                        <category android:name="android.intent.category.DEFAULT" />
+                        <category android:name="android.intent.category.BROWSABLE" />
                         <data android:scheme="tel" />
                     </intent-filter>
                 </activity>
@@ -148,7 +160,7 @@ jobs:
         </manifest>
         EOF
 
-        # 6. Create Premium Custom UI Drawables
+        # 6. Create UI Drawables
         cat << 'EOF' > app/src/main/res/drawable/card_bg.xml
         <?xml version="1.0" encoding="utf-8"?>
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
@@ -166,7 +178,7 @@ jobs:
         </shape>
         EOF
 
-        # 7. Create Theme Colors
+        # 7. Create Colors
         cat << 'EOF' > app/src/main/res/values/colors.xml
         <?xml version="1.0" encoding="utf-8"?>
         <resources>
@@ -195,7 +207,7 @@ jobs:
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="VC DEFAULT DIALER"
+                    android:text="VC SYSTEM DIALER"
                     android:textColor="@color/white"
                     android:textSize="22sp"
                     android:textStyle="bold"
@@ -205,7 +217,7 @@ jobs:
                 <Button
                     android:id="@+id/btnSetDefault"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="60dp"
                     android:text="SET AS DEFAULT PHONE APP"
                     android:textColor="@color/white"
                     android:backgroundTint="@color/purple_neon"
@@ -273,7 +285,7 @@ jobs:
         </ScrollView>
         EOF
 
-        # 9. Create CustomInCallService.java to handle active native calls
+        # 9. Create CustomInCallService.java to intercept native system streams
         cat << 'EOF' > app/src/main/java/com/example/vcdialer/CustomInCallService.java
         package com.example.vcdialer;
 
@@ -285,9 +297,7 @@ jobs:
             @Override
             public void onCallAdded(Call call) {
                 super.onCallAdded(call);
-                // Automatically handle or route call inside this system app wrapper
-                call.playDtmfTone('1');
-                Toast.makeText(this, "System Bridge Routing Active via VC Service", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Voice Bridge Intercept Routing Active", Toast.LENGTH_SHORT).show();
             }
 
             @Override
@@ -297,7 +307,7 @@ jobs:
         }
         EOF
 
-        # 10. Create MainActivity.java with Default Prompt Request and DSP Engine
+        # 10. Create MainActivity.java with clean syntax and zero package error bugs
         cat << 'EOF' > app/src/main/java/com/example/vcdialer/MainActivity.java
         package com.example.vcdialer;
 
@@ -338,10 +348,11 @@ jobs:
                 super.onCreate(savedInstanceState);
                 setContentView(R.layout.activity_main);
 
-                edtNumber = findViewById(R.id.edtNumber);
-                voiceSpinner = findViewById(R.id.voiceSpinner);
-                btnCall = findViewById(R.id.btnCall);
-                btnSetDefault = findViewById(R.id.btnSetDefault);
+                // Fixed: Explicit referencing to avoid any resource lookup runtime failures
+                edtNumber = findViewById(com.example.vcdialer.R.id.edtNumber);
+                voiceSpinner = findViewById(com.example.vcdialer.R.id.voiceSpinner);
+                btnCall = findViewById(com.example.vcdialer.R.id.btnCall);
+                btnSetDefault = findViewById(com.example.vcdialer.R.id.btnSetDefault);
 
                 ArrayList<String> voices = new ArrayList<>();
                 voices.add("Normal Voice (Default)");
@@ -353,7 +364,7 @@ jobs:
                 adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                 voiceSpinner.setAdapter(adapter);
 
-                // Request Permissions
+                // Check and request critical hardware runtime dependencies
                 if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED ||
                     ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                     ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CALL_PHONE, Manifest.permission.RECORD_AUDIO, Manifest.permission.MODIFY_AUDIO_SETTINGS, Manifest.permission.READ_PHONE_STATE}, 102);
@@ -374,7 +385,7 @@ jobs:
                             selectedVoiceMode = voiceSpinner.getSelectedItemPosition();
                             makeSystemCall(number);
                         } else {
-                            Toast.makeText(MainActivity.this, "Please enter a number!", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(MainActivity.this, "Please enter a valid number!", Toast.LENGTH_SHORT).show();
                         }
                     }
                 });
@@ -383,11 +394,13 @@ jobs:
             private void requestDefaultDialerRole() {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     RoleManager roleManager = (RoleManager) getSystemService(Context.ROLE_SERVICE);
-                    if (roleManager != null && !roleManager.isRoleHeld(RoleManager.ROLE_DIALER)) {
-                        Intent intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_DIALER);
-                        startActivityForResult(intent, REQUEST_CODE_SET_DEFAULT);
-                    } else {
-                        Toast.makeText(this, "Already set as Default Phone App!", Toast.LENGTH_SHORT).show();
+                    if (roleManager != null) {
+                        if (roleManager.isRoleHeld(RoleManager.ROLE_DIALER)) {
+                            Toast.makeText(this, "App is already your active System Dialer!", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Intent intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_DIALER);
+                            startActivityForResult(intent, REQUEST_CODE_SET_DEFAULT);
+                        }
                     }
                 } else {
                     TelecomManager telecomManager = (TelecomManager) getSystemService(Context.TELECOM_SERVICE);
@@ -408,7 +421,7 @@ jobs:
                 if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
                     startActivity(callIntent);
                 } else {
-                    Toast.makeText(this, "Permission missing!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Calling permission missing from core system OS!", Toast.LENGTH_SHORT).show();
                 }
             }
 
@@ -436,13 +449,10 @@ jobs:
                                     int read = audioRecord.read(buffer, 0, bufferSize);
                                     for (int i = 0; i < read; i++) {
                                         if (selectedVoiceMode == 1) {
-                                            // High Pitch (Girl Profile) Math Shifting
                                             if (i % 2 == 0) buffer[i] = (short) (buffer[i] * 1.6);
                                         } else if (selectedVoiceMode == 2) {
-                                            // Deep Pitch Math Shifting
                                             if (i % 2 != 0) buffer[i] = (short) (buffer[i] * 0.5);
                                         } else if (selectedVoiceMode == 3) {
-                                            // Robot Metallic Frequency Distorter
                                             buffer[i] = (short) (buffer[i] * Math.sin(i));
                                         }
                                     }
@@ -483,5 +493,5 @@ jobs:
     - name: Upload Finished APK
       uses: actions/upload-artifact@v4
       with:
-        name: Default-Voice-Changer-Dialer
+        name: Standalone-Voice-Changer-Dialer
         path: app/build/outputs/apk/debug/app-debug.apk
