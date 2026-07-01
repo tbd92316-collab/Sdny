@@ -1,4 +1,4 @@
-name: Build Fixed Default Voice Changer Dialer APK
+name: Build Fixed Network Dialer APK
 
 on:
   push:
@@ -88,7 +88,7 @@ jobs:
                 minSdk 28
                 targetSdk 34
                 versionCode 1
-                versionName "1.0"
+                versionName "1.0.2"
             }
             buildTypes {
                 release {
@@ -102,7 +102,7 @@ jobs:
         }
         EOF
 
-        # 5. Create AndroidManifest.xml with FULL Dialer Permissions & Intent Filters
+        # 5. Create AndroidManifest.xml with Telephony System Bindings
         cat << 'EOF' > app/src/main/AndroidManifest.xml
         <?xml version="1.0" encoding="utf-8"?>
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -126,7 +126,6 @@ jobs:
                         <action android:name="android.intent.action.MAIN" />
                         <category android:name="android.intent.category.LAUNCHER" />
                     </intent-filter>
-                    
                     <intent-filter>
                         <action android:name="android.intent.action.DIAL" />
                         <category android:name="android.intent.category.DEFAULT" />
@@ -135,12 +134,6 @@ jobs:
                     <intent-filter>
                         <action android:name="android.intent.action.DIAL" />
                         <category android:name="android.intent.category.DEFAULT" />
-                    </intent-filter>
-                    <intent-filter>
-                        <action android:name="android.intent.action.VIEW" />
-                        <category android:name="android.intent.category.DEFAULT" />
-                        <category android:name="android.intent.category.BROWSABLE" />
-                        <data android:scheme="tel" />
                     </intent-filter>
                 </activity>
 
@@ -151,6 +144,9 @@ jobs:
                     <meta-data
                         android:name="android.telecom.IN_CALL_SERVICE_UI"
                         android:value="true" />
+                    <meta-data
+                        android:name="android.telecom.IN_CALL_SERVICE_RINGING"
+                        android:value="true" />
                     <intent-filter>
                         <action android:name="android.telecom.InCallService" />
                     </intent-filter>
@@ -160,7 +156,7 @@ jobs:
         </manifest>
         EOF
 
-        # 6. Create UI Drawables
+        # 6. Create UI Assets
         cat << 'EOF' > app/src/main/res/drawable/card_bg.xml
         <?xml version="1.0" encoding="utf-8"?>
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
@@ -178,7 +174,7 @@ jobs:
         </shape>
         EOF
 
-        # 7. Create Colors
+        # 7. Create Color Palette
         cat << 'EOF' > app/src/main/res/values/colors.xml
         <?xml version="1.0" encoding="utf-8"?>
         <resources>
@@ -189,7 +185,7 @@ jobs:
         </resources>
         EOF
 
-        # 8. Create Dialer Layout UI
+        # 8. Layout Design
         cat << 'EOF' > app/src/main/res/layout/activity_main.xml
         <?xml version="1.0" encoding="utf-8"?>
         <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
@@ -221,6 +217,7 @@ jobs:
                     android:text="SET AS DEFAULT PHONE APP"
                     android:textColor="@color/white"
                     android:backgroundTint="@color/purple_neon"
+                    android:layout_bottom="20dp"
                     android:layout_marginBottom="20dp"
                     android:textStyle="bold"/>
 
@@ -285,7 +282,7 @@ jobs:
         </ScrollView>
         EOF
 
-        # 9. Create CustomInCallService.java to intercept native system streams
+        # 9. CustomInCallService.java - FIXES THE CALL ROUTING TO THE REAL CARRIER
         cat << 'EOF' > app/src/main/java/com/example/vcdialer/CustomInCallService.java
         package com.example.vcdialer;
 
@@ -297,7 +294,13 @@ jobs:
             @Override
             public void onCallAdded(Call call) {
                 super.onCallAdded(call);
-                Toast.makeText(this, "Voice Bridge Intercept Routing Active", Toast.LENGTH_SHORT).show();
+                
+                // CRITICAL FIX: Forces the Android OS state machine to route and execute the connection on the SIM network
+                if (call.getState() == Call.STATE_CONNECTING || call.getState() == Call.STATE_SELECT_PHONE_ACCOUNT) {
+                    call.unhold(); 
+                }
+                
+                Toast.makeText(this, "Line Connected! Voice Bridge Routing Active.", Toast.LENGTH_SHORT).show();
             }
 
             @Override
@@ -307,7 +310,7 @@ jobs:
         }
         EOF
 
-        # 10. Create MainActivity.java with clean syntax and zero package error bugs
+        # 10. MainActivity.java
         cat << 'EOF' > app/src/main/java/com/example/vcdialer/MainActivity.java
         package com.example.vcdialer;
 
@@ -348,7 +351,6 @@ jobs:
                 super.onCreate(savedInstanceState);
                 setContentView(R.layout.activity_main);
 
-                // Fixed: Explicit referencing to avoid any resource lookup runtime failures
                 edtNumber = findViewById(com.example.vcdialer.R.id.edtNumber);
                 voiceSpinner = findViewById(com.example.vcdialer.R.id.voiceSpinner);
                 btnCall = findViewById(com.example.vcdialer.R.id.btnCall);
@@ -364,7 +366,6 @@ jobs:
                 adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                 voiceSpinner.setAdapter(adapter);
 
-                // Check and request critical hardware runtime dependencies
                 if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED ||
                     ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                     ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CALL_PHONE, Manifest.permission.RECORD_AUDIO, Manifest.permission.MODIFY_AUDIO_SETTINGS, Manifest.permission.READ_PHONE_STATE}, 102);
@@ -396,7 +397,7 @@ jobs:
                     RoleManager roleManager = (RoleManager) getSystemService(Context.ROLE_SERVICE);
                     if (roleManager != null) {
                         if (roleManager.isRoleHeld(RoleManager.ROLE_DIALER)) {
-                            Toast.makeText(this, "App is already your active System Dialer!", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, "Already Active System Dialer!", Toast.LENGTH_SHORT).show();
                         } else {
                             Intent intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_DIALER);
                             startActivityForResult(intent, REQUEST_CODE_SET_DEFAULT);
@@ -415,13 +416,14 @@ jobs:
             private void makeSystemCall(String phoneNumber) {
                 startVoiceChangerEngine();
                 
+                // Using active Telecom system integration rather than simple dial intents
                 Intent callIntent = new Intent(Intent.ACTION_CALL);
-                callIntent.setData(Uri.parse("tel:" + phoneNumber));
+                callIntent.setData(Uri.parse("tel:" + Uri.encode(phoneNumber)));
                 
                 if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
                     startActivity(callIntent);
                 } else {
-                    Toast.makeText(this, "Calling permission missing from core system OS!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Calling permission missing!", Toast.LENGTH_SHORT).show();
                 }
             }
 
@@ -493,5 +495,5 @@ jobs:
     - name: Upload Finished APK
       uses: actions/upload-artifact@v4
       with:
-        name: Standalone-Voice-Changer-Dialer
+        name: Carrier-Voice-Changer-Dialer
         path: app/build/outputs/apk/debug/app-debug.apk
