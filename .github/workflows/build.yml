@@ -1,4 +1,4 @@
-name: Build Fixed Network Dialer APK
+name: Build Standard Functional System Dialer APK
 
 on:
   push:
@@ -88,7 +88,7 @@ jobs:
                 minSdk 28
                 targetSdk 34
                 versionCode 1
-                versionName "1.0.4"
+                versionName "1.1.0"
             }
             buildTypes {
                 release {
@@ -102,20 +102,18 @@ jobs:
         }
         EOF
 
-        # 5. Create AndroidManifest.xml
+        # 5. Create AndroidManifest.xml with Dialer Roles and Activities
         cat << 'EOF' > app/src/main/AndroidManifest.xml
         <?xml version="1.0" encoding="utf-8"?>
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             
             <uses-permission android:name="android.permission.CALL_PHONE" />
-            <uses-permission android:name="android.permission.RECORD_AUDIO" />
-            <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
             <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
             <uses-permission android:name="android.permission.READ_PHONE_STATE" />
 
             <application
                 android:allowBackup="true"
-                android:label="VC System Dialer"
+                android:label="My Simple Dialer"
                 android:theme="@style/Theme.AppCompat.NoActionBar">
                 
                 <activity
@@ -137,15 +135,18 @@ jobs:
                     </intent-filter>
                 </activity>
 
+                <activity
+                    android:name=".InCallActivity"
+                    android:launchMode="singleInstance"
+                    android:excludeFromRecents="true"
+                    android:exported="false" />
+
                 <service
                     android:name=".CustomInCallService"
                     android:permission="android.permission.BIND_INCALL_SERVICE"
                     android:exported="true">
                     <meta-data
                         android:name="android.telecom.IN_CALL_SERVICE_UI"
-                        android:value="true" />
-                    <meta-data
-                        android:name="android.telecom.IN_CALL_SERVICE_RINGING"
                         android:value="true" />
                     <intent-filter>
                         <action android:name="android.telecom.InCallService" />
@@ -156,7 +157,7 @@ jobs:
         </manifest>
         EOF
 
-        # 6. Create UI Assets
+        # 6. Create UI Drawables
         cat << 'EOF' > app/src/main/res/drawable/card_bg.xml
         <?xml version="1.0" encoding="utf-8"?>
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
@@ -174,139 +175,257 @@ jobs:
         </shape>
         EOF
 
-        # 7. Create Color Palette (FIXED: Tag properly closed here)
+        cat << 'EOF' > app/src/main/res/drawable/btn_hangup_bg.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <shape xmlns:android="http://schemas.android.com/apk/res/android">
+            <solid android:color="#D50000" />
+            <corners android:radius="30dp" />
+        </shape>
+        EOF
+
+        # 7. Create App Colors
         cat << 'EOF' > app/src/main/res/values/colors.xml
         <?xml version="1.0" encoding="utf-8"?>
         <resources>
             <color name="bg_dark">#0F0E17</color>
-            <color name="purple_neon">#A156FF</color>
+            <color name="blue_premium">#2979FF</color>
             <color name="text_gray">#8E8C9A</color>
             <color name="white">#FFFFFF</color>
         </resources>
         EOF
 
-        # 8. Layout Design
+        # 8. Main UI Layout (Dialer Screen)
         cat << 'EOF' > app/src/main/res/layout/activity_main.xml
         <?xml version="1.0" encoding="utf-8"?>
-        <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@color/bg_dark"
-            android:fillViewport="true">
+            android:orientation="vertical"
+            android:padding="20dp"
+            android:gravity="center_horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SIMPLE SYSTEM DIALER"
+                android:textColor="@color/white"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:layout_marginTop="40dp"
+                android:layout_marginBottom="30dp"/>
+
+            <Button
+                android:id="@+id/btnSetDefault"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:text="SET AS DEFAULT PHONE APP"
+                android:textColor="@color/white"
+                android:backgroundTint="@color/blue_premium"
+                android:layout_marginBottom="30dp"
+                android:textStyle="bold"/>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="@drawable/card_bg"
                 android:orientation="vertical"
-                android:padding="20dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="VC SYSTEM DIALER"
-                    android:textColor="@color/white"
-                    android:textSize="22sp"
-                    android:textStyle="bold"
-                    android:layout_gravity="center"
-                    android:layout_marginBottom="24dp"/>
-
-                <Button
-                    android:id="@+id/btnSetDefault"
+                android:padding="16dp"
+                android:layout_marginBottom="40dp">
+                
+                <EditText
+                    android:id="@+id/edtNumber"
                     android:layout_width="match_parent"
                     android:layout_height="60dp"
-                    android:text="SET AS DEFAULT PHONE APP"
+                    android:hint="Enter Number to Call"
+                    android:textColorHint="@color/text_gray"
                     android:textColor="@color/white"
-                    android:backgroundTint="@color/purple_neon"
-                    android:layout_marginBottom="20dp"
-                    android:textStyle="bold"/>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/card_bg"
-                    android:orientation="vertical"
-                    android:padding="16dp"
-                    android:layout_marginBottom="20dp">
-                    
-                    <EditText
-                        android:id="@+id/edtNumber"
-                        android:layout_width="match_parent"
-                        android:layout_height="60dp"
-                        android:hint="Enter Phone Number"
-                        android:textColorHint="@color/text_gray"
-                        android:textColor="@color/white"
-                        android:inputType="phone"
-                        android:textSize="24sp"
-                        android:gravity="center"
-                        android:background="@android:color/transparent"/>
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="ACTIVE VOICE MODIFIER PROFILE"
-                    android:textColor="@color/purple_neon"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="10dp"/>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/card_bg"
-                    android:orientation="vertical"
-                    android:padding="8dp"
-                    android:layout_marginBottom="30dp">
-                    
-                    <Spinner
-                        android:id="@+id/voiceSpinner"
-                        android:layout_width="match_parent"
-                        android:layout_height="50dp"
-                        android:backgroundTint="@color/white"/>
-                </LinearLayout>
-
-                <Button
-                    android:id="@+id/btnCall"
-                    android:layout_width="200dp"
-                    android:layout_height="60dp"
-                    android:layout_gravity="center"
-                    android:background="@drawable/btn_call_bg"
-                    android:text="LAUNCH CALL"
-                    android:textColor="@color/white"
-                    android:textStyle="bold"
-                    android:textSize="16sp"
-                    android:elevation="4dp"/>
-
+                    android:inputType="phone"
+                    android:textSize="26sp"
+                    android:gravity="center"
+                    android:background="@android:color/transparent"/>
             </LinearLayout>
-        </ScrollView>
+
+            <Button
+                android:id="@+id/btnCall"
+                android:layout_width="220dp"
+                android:layout_height="60dp"
+                android:background="@drawable/btn_call_bg"
+                android:text="CALL NOW"
+                android:textColor="@color/white"
+                android:textStyle="bold"
+                android:textSize="18sp"
+                android:elevation="4dp"/>
+
+        </LinearLayout>
         EOF
 
-        # 9. CustomInCallService.java
+        # 9. In-Call Layout UI (Calling View with Disconnect Button)
+        cat << 'EOF' > app/src/main/res/layout/activity_in_call.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/bg_dark"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="20dp">
+
+            <TextView
+                android:id="@+id/txtCallStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="DIALING..."
+                android:textColor="@color/blue_premium"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="10dp"/>
+
+            <TextView
+                android:id="@+id/txtPhoneNumber"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Unknown Number"
+                android:textColor="@color/white"
+                android:textSize="28sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="80dp"/>
+
+            <Button
+                android:id="@+id/btnHangup"
+                android:layout_width="150dp"
+                android:layout_height="60dp"
+                android:background="@drawable/btn_hangup_bg"
+                android:text="END CALL"
+                android:textColor="@color/white"
+                android:textStyle="bold"
+                android:textSize="16sp"
+                android:elevation="4dp"/>
+
+        </LinearLayout>
+        EOF
+
+        # 10. CustomInCallService.java (Bridge that communicates between system hardware & App UI)
         cat << 'EOF' > app/src/main/java/com/example/vcdialer/CustomInCallService.java
         package com.example.vcdialer;
 
+        import android.content.Intent;
         import android.telecom.Call;
         import android.telecom.InCallService;
-        import android.widget.Toast;
 
         public class CustomInCallService extends InCallService {
+            private static Call currentCall = null;
+
+            public static Call getCurrentCall() {
+                return currentCall;
+            }
+
             @Override
             public void onCallAdded(Call call) {
                 super.onCallAdded(call);
-                if (call.getState() == Call.STATE_CONNECTING || call.getState() == Call.STATE_SELECT_PHONE_ACCOUNT) {
-                    call.unhold(); 
+                currentCall = call;
+                
+                // Get the dialled string profile data safely
+                String number = "Unknown";
+                if (call.getDetails() != null && call.getDetails().getHandle() != null) {
+                    number = call.getDetails().getHandle().getSchemeSpecificPart();
                 }
-                Toast.makeText(this, "Line Connected! Voice Bridge Routing Active.", Toast.LENGTH_SHORT).show();
+
+                // Fire up the Native InCall Screen Layout right away
+                Intent intent = new Intent(this, InCallActivity.class);
+                intent.putExtra("NUMBER", number);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
             }
 
             @Override
             public void onCallRemoved(Call call) {
                 super.onCallRemoved(call);
+                currentCall = null;
             }
         }
         EOF
 
-        # 10. MainActivity.java
+        # 11. InCallActivity.java (Controls the Active call session UI and Disconnection loops)
+        cat << 'EOF' > app/src/main/java/com/example/vcdialer/InCallActivity.java
+        package com.example.vcdialer;
+
+        import android.os.Bundle;
+        import android.telecom.Call;
+        import android.view.View;
+        import android.widget.Button;
+        import android.widget.TextView;
+        import androidx.appcompat.app.AppCompatActivity;
+
+        public class InCallActivity extends AppCompatActivity {
+            private TextView txtCallStatus, txtPhoneNumber;
+            private Button btnHangup;
+
+            private Call.Callback callCallback = new Call.Callback() {
+                @Override
+                public void onStateChanged(Call call, int state) {
+                    super.onStateChanged(call, state);
+                    updateCallState(state);
+                }
+            };
+
+            @Override
+            protected void onCreate(Bundle savedInstanceState) {
+                super.onCreate(savedInstanceState);
+                setContentView(R.layout.activity_in_call);
+
+                txtCallStatus = findViewById(com.example.vcdialer.R.id.txtCallStatus);
+                txtPhoneNumber = findViewById(com.example.vcdialer.R.id.txtPhoneNumber);
+                btnHangup = findViewById(com.example.vcdialer.R.id.btnHangup);
+
+                String number = getIntent().getStringExtra("NUMBER");
+                if (number != null) {
+                    txtPhoneNumber.setText(number);
+                }
+
+                final Call activeCall = CustomInCallService.getCurrentCall();
+                if (activeCall != null) {
+                    activeCall.registerCallback(callCallback);
+                    updateCallState(activeCall.getState());
+                } else {
+                    finish();
+                }
+
+                btnHangup.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        if (activeCall != null) {
+                            activeCall.disconnect(); // Instructs hardware modem layer to drop line immediately
+                        }
+                        finish();
+                    }
+                });
+            }
+
+            private void updateCallState(int state) {
+                if (state == Call.STATE_ACTIVE) {
+                    txtCallStatus.setText("CALL ACTIVE");
+                } else if (state == Call.STATE_RINGING) {
+                    txtCallStatus.setText("RINGING...");
+                } else if (state == Call.STATE_DIALING) {
+                    txtCallStatus.setText("DIALING...");
+                } else if (state == Call.STATE_DISCONNECTED) {
+                    finish();
+                }
+            }
+
+            @Override
+            protected void onDestroy() {
+                super.onDestroy();
+                Call activeCall = CustomInCallService.getCurrentCall();
+                if (activeCall != null) {
+                    activeCall.unregisterCallback(callCallback);
+                }
+            }
+        }
+        EOF
+
+        # 12. MainActivity.java (Standard Controller Launcher)
         cat << 'EOF' > app/src/main/java/com/example/vcdialer/MainActivity.java
         package com.example.vcdialer;
 
@@ -315,32 +434,21 @@ jobs:
         import android.content.Context;
         import android.content.Intent;
         import android.content.pm.PackageManager;
-        import android.media.AudioFormat;
-        import android.media.AudioRecord;
-        import android.media.MediaRecorder;
         import android.net.Uri;
         import android.os.Build;
         import android.os.Bundle;
         import android.telecom.TelecomManager;
         import android.view.View;
-        import android.widget.ArrayAdapter;
         import android.widget.Button;
         import android.widget.EditText;
-        import android.widget.Spinner;
         import android.widget.Toast;
         import androidx.appcompat.app.AppCompatActivity;
         import androidx.core.app.ActivityCompat;
-        import java.util.ArrayList;
 
         public class MainActivity extends AppCompatActivity {
             private EditText edtNumber;
-            private Spinner voiceSpinner;
             private Button btnCall, btnSetDefault;
-            
-            private AudioRecord audioRecord;
-            private boolean isProcessingVoice = false;
-            private int selectedVoiceMode = 0; 
-            private static final int REQUEST_CODE_SET_DEFAULT = 123;
+            private static final int REQUEST_CODE_SET_DEFAULT = 456;
 
             @Override
             protected void onCreate(Bundle savedInstanceState) {
@@ -348,29 +456,17 @@ jobs:
                 setContentView(R.layout.activity_main);
 
                 edtNumber = findViewById(com.example.vcdialer.R.id.edtNumber);
-                voiceSpinner = findViewById(com.example.vcdialer.R.id.voiceSpinner);
                 btnCall = findViewById(com.example.vcdialer.R.id.btnCall);
                 btnSetDefault = findViewById(com.example.vcdialer.R.id.btnSetDefault);
 
-                ArrayList<String> voices = new ArrayList<>();
-                voices.add("Normal Voice (Default)");
-                voices.add("High Pitch (Girl/Child)");
-                voices.add("Deep Pitch (Monster)");
-                voices.add("Robot Effect");
-
-                ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, voices);
-                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                voiceSpinner.setAdapter(adapter);
-
-                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED ||
-                    ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CALL_PHONE, Manifest.permission.RECORD_AUDIO, Manifest.permission.MODIFY_AUDIO_SETTINGS, Manifest.permission.READ_PHONE_STATE}, 102);
+                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CALL_PHONE, Manifest.permission.READ_PHONE_STATE}, 201);
                 }
 
                 btnSetDefault.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        requestDefaultDialerRole();
+                        checkAndRequestDialerRole();
                     }
                 });
 
@@ -379,21 +475,20 @@ jobs:
                     public void onClick(View v) {
                         String number = edtNumber.getText().toString().trim();
                         if (!number.isEmpty()) {
-                            selectedVoiceMode = voiceSpinner.getSelectedItemPosition();
-                            makeSystemCall(number);
+                            executeDial(number);
                         } else {
-                            Toast.makeText(MainActivity.this, "Please enter a valid number!", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(MainActivity.this, "Enter a target number!", Toast.LENGTH_SHORT).show();
                         }
                     }
                 });
             }
 
-            private void requestDefaultDialerRole() {
+            private void checkAndRequestDialerRole() {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     RoleManager roleManager = (RoleManager) getSystemService(Context.ROLE_SERVICE);
                     if (roleManager != null) {
                         if (roleManager.isRoleHeld(RoleManager.ROLE_DIALER)) {
-                            Toast.makeText(this, "Already Active System Dialer!", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, "Simple Dialer is already Default!", Toast.LENGTH_SHORT).show();
                         } else {
                             Intent intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_DIALER);
                             startActivityForResult(intent, REQUEST_CODE_SET_DEFAULT);
@@ -409,86 +504,8 @@ jobs:
                 }
             }
 
-            private void makeSystemCall(String phoneNumber) {
-                startVoiceChangerEngine();
-                
+            private void executeDial(String phoneNumber) {
                 Intent callIntent = new Intent(Intent.ACTION_CALL);
                 callIntent.setData(Uri.parse("tel:" + Uri.encode(phoneNumber)));
                 
-                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
-                    startActivity(callIntent);
-                } else {
-                    Toast.makeText(this, "Calling permission missing!", Toast.LENGTH_SHORT).show();
-                }
-            }
-
-            private void startVoiceChangerEngine() {
-                try {
-                    int bufferSize = AudioRecord.getMinBufferSize(44100, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
-                    if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                        
-                        audioRecord = new AudioRecord(
-                            MediaRecorder.AudioSource.MIC,
-                            44100,
-                            AudioFormat.CHANNEL_IN_MONO,
-                            AudioFormat.ENCODING_PCM_16BIT,
-                            bufferSize
-                        );
-
-                        audioRecord.startRecording();
-                        isProcessingVoice = true;
-
-                        new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                short[] buffer = new short[bufferSize];
-                                while (isProcessingVoice) {
-                                    int read = audioRecord.read(buffer, 0, bufferSize);
-                                    for (int i = 0; i < read; i++) {
-                                        if (selectedVoiceMode == 1) {
-                                            if (i % 2 == 0) buffer[i] = (short) (buffer[i] * 1.6);
-                                        } else if (selectedVoiceMode == 2) {
-                                            if (i % 2 != 0) buffer[i] = (short) (buffer[i] * 0.5);
-                                        } else if (selectedVoiceMode == 3) {
-                                            buffer[i] = (short) (buffer[i] * Math.sin(i));
-                                        }
-                                    }
-                                }
-                            }
-                        }).start();
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-
-            @Override
-            protected void onDestroy() {
-                super.onDestroy();
-                isProcessingVoice = false;
-                if (audioRecord != null) {
-                    try {
-                        audioRecord.stop();
-                        audioRecord.release();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }
-        EOF
-
-        # 11. Setup Gradle Wrapper
-        gradle wrapper --gradle-version 8.4
-
-    - name: Grant Execute Permission for Gradle
-      run: chmod +x ./gradlew
-
-    - name: Build Debug APK with Gradle
-      run: ./gradlew assembleDebug
-
-    - name: Upload Finished APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: Carrier-Voice-Changer-Dialer
-        path: app/build/outputs/apk/debug/app-debug.apk
+                if (ActivityCompat.check
