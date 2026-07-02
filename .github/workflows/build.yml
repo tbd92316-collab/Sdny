@@ -1,4 +1,4 @@
-name: Build Internal QR Scanner App APK
+name: Build Face Detection Camera App
 
 on:
   push:
@@ -8,483 +8,132 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout Repository
+    - name: Checkout
       uses: actions/checkout@v4
-
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
-
-    - name: Create Android Project Structure Automatically
+    - name: Generate Project
       run: |
-        echo "Creating directories..."
-        mkdir -p app/src/main/java/com/example/qrscanner
-        mkdir -p app/src/main/res/layout
-        mkdir -p app/src/main/res/values
-        mkdir -p app/src/main/res/drawable
-
-        # 1. Root build.gradle
-        cat << 'EOF' > build.gradle
-        buildscript {
-            repositories {
-                google()
-                mavenCentral()
-            }
-            dependencies {
-                classpath 'com.android.tools.build:gradle:8.2.2'
-            }
-        }
-        allprojects {
-            repositories {
-                google()
-                mavenCentral()
-            }
-        }
-        task clean(type: Delete) {
-            delete rootProject.buildDir
-        }
-        EOF
-
-        # 2. settings.gradle
-        cat << 'EOF' > settings.gradle
-        pluginManagement {
-            repositories {
-                google()
-                mavenCentral()
-                gradlePluginPortal()
-            }
-        }
-        dependencyResolutionManagement {
-            repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
-            repositories {
-                google()
-                mavenCentral()
-            }
-        }
-        rootProject.name = "QRScanner"
-        include ':app'
-        EOF
-
-        # 3. gradle.properties
-        cat << 'EOF' > gradle.properties
-        android.useAndroidX=true
-        android.nonTransitiveRClass=true
-        EOF
-
-        # 4. app/build.gradle (Adding CameraX and ML Kit dependencies)
+        mkdir -p app/src/main/java/com/example/facedetector
+        
+        # 1. build.gradle
         cat << 'EOF' > app/build.gradle
-        plugins {
-            id 'com.android.application'
-        }
+        plugins { id 'com.android.application' }
         android {
-            namespace 'com.example.qrscanner'
+            namespace 'com.example.facedetector'
             compileSdk 34
             defaultConfig {
-                applicationId "com.example.qrscanner"
+                applicationId "com.example.facedetector"
                 minSdk 24
                 targetSdk 34
-                versionCode 1
-                versionName "1.0.0"
-            }
-            buildTypes {
-                release {
-                    minifyEnabled false
-                }
             }
         }
         dependencies {
             implementation 'androidx.appcompat:appcompat:1.6.1'
-            implementation 'com.google.android.material:material:1.11.0'
-            
-            // CameraX Core and Lifecycle
-            implementation 'androidx.camera:camera-core:1.3.1'
             implementation 'androidx.camera:camera-camera2:1.3.1'
             implementation 'androidx.camera:camera-lifecycle:1.3.1'
             implementation 'androidx.camera:camera-view:1.3.1'
-            
-            // Google ML Kit Barcode Scanning (QR Code)
-            implementation 'com.google.mlkit:barcode-scanning:17.2.0'
+            implementation 'com.google.mlkit:face-detection:16.1.5'
         }
         EOF
 
-        # 5. AndroidManifest.xml (Camera permissions)
-        cat << 'EOF' > app/src/main/AndroidManifest.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-            
-            <uses-feature android:name="android.hardware.camera.any" />
-            <uses-permission android:name="android.permission.CAMERA" />
-
-            <application
-                android:allowBackup="true"
-                android:label="Internal QR Scanner"
-                android:theme="@style/Theme.AppCompat.NoActionBar">
-                
-                <activity
-                    android:name=".MainActivity"
-                    android:exported="true"
-                    android:screenOrientation="portrait">
-                    <intent-filter>
-                        <action android:name="android.intent.action.MAIN" />
-                        <category android:name="android.intent.category.LAUNCHER" />
-                    </intent-filter>
-                </activity>
-                
-            </application>
-        </manifest>
-        EOF
-
-        # 6. UI Drawables (Neon Scanner UI style)
-        cat << 'EOF' > app/src/main/res/drawable/scanner_overlay.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <shape xmlns:android="http://schemas.android.com/apk/res/android">
-            <stroke android:width="4dp" android:color="#00E676" />
-            <corners android:radius="16dp" />
-            <solid android:color="#00000000" />
-        </shape>
-        EOF
-
-        cat << 'EOF' > app/src/main/res/drawable/result_card_bg.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <shape xmlns:android="http://schemas.android.com/apk/res/android">
-            <solid android:color="#1E1E2A" />
-            <corners android:radius="20dp" />
-            <stroke android:width="2dp" android:color="#2979FF"/>
-        </shape>
-        EOF
-
-        # 7. App Colors
-        cat << 'EOF' > app/src/main/res/values/colors.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <resources>
-            <color name="bg_dark">#0F0E17</color>
-            <color name="neon_green">#00E676</color>
-            <color name="blue_link">#2979FF</color>
-            <color name="white">#FFFFFF</color>
-            <color name="gray_text">#B0B0C3</color>
-        </resources>
-        EOF
-
-        # 8. Main UI Layout (Full Camera Preview + Scanner Box + Built-in Result Card)
-        cat << 'EOF' > app/src/main/res/layout/activity_main.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@color/bg_dark">
-
-            <androidx.camera.view.PreviewView
-                android:id="@+id/previewView"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" />
-
-            <View
-                android:layout_width="280dp"
-                android:layout_height="280dp"
-                android:layout_centerInParent="true"
-                android:background="@drawable/scanner_overlay" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Align QR Code inside the frame"
-                android:textColor="@color/white"
-                android:textSize="14sp"
-                android:layout_above="@id/resultCard"
-                android:layout_centerHorizontal="true"
-                android:layout_marginBottom="30dp"
-                android:background="#80000000"
-                android:padding="8dp"/>
-
-            <LinearLayout
-                android:id="@+id/resultCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_alignParentBottom="true"
-                android:background="@drawable/result_card_bg"
-                android:orientation="vertical"
-                android:padding="20dp"
-                android:layout_margin="16dp"
-                android:visibility="gone">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="SCAN RESULT"
-                    android:textColor="@color/neon_green"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="8dp"/>
-
-                <TextView
-                    android:id="@+id/txtResult"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="QR Data appears here..."
-                    android:textColor="@color/white"
-                    android:textSize="16sp"
-                    android:layout_marginBottom="16dp"
-                    android:textIsSelectable="true"/>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:weightSum="2">
-
-                    <Button
-                        android:id="@+id/btnScanAgain"
-                        android:layout_width="0dp"
-                        android:layout_height="50dp"
-                        android:layout_weight="1"
-                        android:text="SCAN AGAIN"
-                        android:textColor="@color/white"
-                        android:backgroundTint="#3A3A4A"
-                        android:layout_marginRight="5dp"/>
-
-                    <Button
-                        android:id="@+id/btnAction"
-                        android:layout_width="0dp"
-                        android:layout_height="50dp"
-                        android:layout_weight="1"
-                        android:text="OPEN LINK"
-                        android:textColor="@color/white"
-                        android:backgroundTint="@color/blue_link"
-                        android:layout_marginLeft="5dp"/>
-                </LinearLayout>
-
-            </LinearLayout>
-        </RelativeLayout>
-        EOF
-
-        # 9. MainActivity.java (CameraX Integration + ML Kit QR Analyzer + Internal UI Manager)
-        cat << 'EOF' > app/src/main/java/com/example/qrscanner/MainActivity.java
-        package com.example.qrscanner;
+        # 2. MainActivity.java (Face detection engine)
+        cat << 'EOF' > app/src/main/java/com/example/facedetector/MainActivity.java
+        package com.example.facedetector;
 
         import android.Manifest;
-        import android.content.ClipData;
-        import android.content.ClipboardManager;
-        import android.content.Context;
-        import android.content.Intent;
-        import android.content.pm.PackageManager;
-        import android.net.Uri;
+        import android.graphics.Canvas;
+        import android.graphics.Color;
+        import android.graphics.Paint;
+        import android.graphics.Rect;
         import android.os.Bundle;
         import android.view.View;
-        import android.widget.Button;
-        import android.widget.LinearLayout;
-        import android.widget.TextView;
-        import android.widget.Toast;
-        import androidx.annotation.NonNull;
         import androidx.appcompat.app.AppCompatActivity;
-        import androidx.camera.core.CameraSelector;
-        import androidx.camera.core.ImageAnalysis;
-        import androidx.camera.core.ImageProxy;
-        import androidx.camera.core.Preview;
+        import androidx.camera.core.*;
         import androidx.camera.lifecycle.ProcessCameraProvider;
         import androidx.camera.view.PreviewView;
-        import androidx.core.app.ActivityCompat;
         import androidx.core.content.ContextCompat;
-        import com.google.android.gms.tasks.OnFailureListener;
-        import com.google.android.gms.tasks.OnSuccessListener;
-        import com.google.common.util.concurrent.ListenableFuture;
-        import com.google.mlkit.vision.barcode.BarcodeScanner;
-        import com.google.mlkit.vision.barcode.BarcodeScannerOptions;
-        import com.google.mlkit.vision.barcode.BarcodeScanning;
-        import com.google.mlkit.vision.barcode.common.Barcode;
+        import com.google.mlkit.vision.face.Face;
+        import com.google.mlkit.vision.face.FaceDetection;
+        import com.google.mlkit.vision.face.FaceDetector;
         import com.google.mlkit.vision.common.InputImage;
-        import java.util.List;
-        import java.util.concurrent.ExecutionExecutor;
-        import java.util.concurrent.ExecutorService;
         import java.util.concurrent.Executors;
 
         public class MainActivity extends AppCompatActivity {
             private PreviewView previewView;
-            private LinearLayout resultCard;
-            private TextView txtResult;
-            private Button btnScanAgain, btnAction;
-
-            private ExecutorService cameraExecutor;
-            private BarcodeScanner scanner;
-            private boolean isScanningActive = true;
+            private GraphicOverlay overlay;
 
             @Override
             protected void onCreate(Bundle savedInstanceState) {
                 super.onCreate(savedInstanceState);
-                setContentView(R.layout.activity_main);
+                overlay = new GraphicOverlay(this);
+                previewView = new PreviewView(this);
+                setContentView(previewView);
+                addContentView(overlay, new android.view.ViewGroup.LayoutParams(-1, -1));
 
-                previewView = findViewById(com.example.qrscanner.R.id.previewView);
-                resultCard = findViewById(com.example.qrscanner.R.id.resultCard);
-                txtResult = findViewById(com.example.qrscanner.R.id.txtResult);
-                btnScanAgain = findViewById(com.example.qrscanner.R.id.btnScanAgain);
-                btnAction = findViewById(com.example.qrscanner.R.id.btnAction);
-
-                cameraExecutor = Executors.newSingleThreadExecutor();
-
-                // Setup ML Kit to look specifically for QR codes
-                BarcodeScannerOptions options = new BarcodeScannerOptions.Builder()
-                        .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
-                        .build();
-                scanner = BarcodeScanning.getClient(options);
-
-                // Request camera permission dynamically
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-                    startCameraEngine();
-                } else {
-                    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, 101);
-                }
-
-                btnScanAgain.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        resultCard.setVisibility(View.GONE);
-                        isScanningActive = true;
-                    }
-                });
+                if (checkSelfPermission(Manifest.permission.CAMERA) == 0) startCamera();
+                else requestPermissions(new String[]{Manifest.permission.CAMERA}, 101);
             }
 
-            private void startCameraEngine() {
-                final ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
+            private void startCamera() {
+                ProcessCameraProvider.getInstance(this).addListener(() -> {
+                    try {
+                        Preview preview = new Preview.Builder().build();
+                        preview.setSurfaceProvider(previewView.getSurfaceProvider());
+                        ImageAnalysis analysis = new ImageAnalysis.Builder().build();
+                        FaceDetector detector = FaceDetection.getClient();
 
-                cameraProviderFuture.addListener(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+                        analysis.setAnalyzer(Executors.newSingleThreadExecutor(), proxy -> {
+                            @SuppressWarnings("ExperimentalGetImage")
+                            InputImage image = InputImage.fromMediaImage(proxy.getImage(), proxy.getImageInfo().getRotationDegrees());
+                            detector.process(image).addOnSuccessListener(faces -> {
+                                overlay.setFaces(faces);
+                            }).addOnCompleteListener(t -> proxy.close());
+                        });
 
-                            Preview preview = new Preview.Builder().build();
-                            preview.setSurfaceProvider(previewView.getSurfaceProvider());
-
-                            CameraSelector cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
-
-                            ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
-                                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                                    .build();
-
-                            imageAnalysis.setAnalyzer(cameraExecutor, new ImageAnalysis.Analyzer() {
-                                @Override
-                                public void analyze(@NonNull ImageProxy imageProxy) {
-                                    if (!isScanningActive) {
-                                        imageProxy.close();
-                                        return;
-                                    }
-
-                                    @SuppressWarnings("ExperimentalGetImage")
-                                    android.media.Image mediaImage = imageProxy.getImage();
-                                    if (mediaImage != null) {
-                                        InputImage image = InputImage.fromMediaImage(mediaImage, imageProxy.getImageInfo().getRotationDegrees());
-                                        
-                                        scanner.process(image)
-                                                .addOnSuccessListener(new OnSuccessListener<List<Barcode>>() {
-                                                    @Override
-                                                    public void onSuccess(List<Barcode> barcodes) {
-                                                        for (Barcode barcode : barcodes) {
-                                                            final String rawValue = barcode.getRawValue();
-                                                            if (rawValue != null && !rawValue.isEmpty()) {
-                                                                isScanningActive = false;
-                                                                runOnUiThread(new Runnable() {
-                                                                    @Override
-                                                                    public void run() {
-                                                                        displayInternalResult(rawValue);
-                                                                    }
-                                                                });
-                                                                break;
-                                                            }
-                                                        }
-                                                    }
-                                                })
-                                                .addOnFailureListener(new OnFailureListener() {
-                                                    @Override
-                                                    public void onFailure(@NonNull Exception e) {
-                                                        e.printStackTrace();
-                                                    }
-                                                })
-                                                .addOnCompleteListener(task -> imageProxy.close());
-                                    } else {
-                                        imageProxy.close();
-                                    }
-                                }
-                            });
-
-                            cameraProvider.unbindAll();
-                            cameraProvider.bindToLifecycle(MainActivity.this, cameraSelector, preview, imageAnalysis);
-
-                        } catch (Exception e) {
-                            Toast.makeText(MainActivity.this, "Camera Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                        }
-                    }
+                        ProcessCameraProvider.getInstance(this).get().bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis);
+                    } catch (Exception e) { e.printStackTrace(); }
                 }, ContextCompat.getMainExecutor(this));
             }
+        }
 
-            // Handles Showing Result data inside our Custom app Card View
-            private void displayInternalResult(final String rawData) {
-                txtResult.setText(rawData);
-                resultCard.setVisibility(View.getSystemUiVisibility());
-                resultCard.setVisibility(View.VISIBLE);
-
-                // Smart Check: Check if scanned QR data is a web link or just normal text
-                if (rawData.startsWith("http://") || rawData.startsWith("https://")) {
-                    btnAction.setText("OPEN LINK");
-                    btnAction.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(rawData));
-                            startActivity(browserIntent);
-                        }
-                    });
-                } else {
-                    btnAction.setText("COPY TEXT");
-                    btnAction.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                            ClipData clip = ClipData.newPlainText("QR Code Content", rawData);
-                            if (clipboard != null) {
-                                clipboard.setPrimaryClip(clip);
-                                Toast.makeText(MainActivity.this, "Copied to clipboard!", Toast.LENGTH_SHORT).show();
-                            }
-                        }
-                    });
-                }
-            }
-
+        class GraphicOverlay extends View {
+            private java.util.List<Face> faces;
+            private Paint paint = new Paint();
+            public GraphicOverlay(android.content.Context c) { super(c); paint.setColor(Color.GREEN); paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(8f); }
+            public void setFaces(java.util.List<Face> f) { this.faces = f; postInvalidate(); }
             @Override
-            public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-                super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-                if (requestCode == 101 && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    startCameraEngine();
-                } else {
-                    Toast.makeText(this, "Camera access permission is required to scan QR codes!", Toast.LENGTH_LONG).show();
-                }
-            }
-
-            @Override
-            protected void onDestroy() {
-                super.onDestroy();
-                cameraExecutor.shutdown();
+            protected void onDraw(Canvas canvas) {
+                if (faces != null) for (Face f : faces) canvas.drawRect(f.getBoundingBox(), paint);
             }
         }
         EOF
 
-        # 10. Setup Gradle Wrapper
+        # 3. AndroidManifest
+        cat << 'EOF' > app/src/main/AndroidManifest.xml
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <uses-permission android:name="android.permission.CAMERA"/>
+            <application android:label="Face Detector" android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+                <activity android:name=".MainActivity" android:exported="true">
+                    <intent-filter>
+                        <action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/>
+                    </intent-filter>
+                </activity>
+            </application>
+        </manifest>
+        EOF
+
+        # Final build steps
         gradle wrapper --gradle-version 8.4
-
-    - name: Grant Execute Permission for Gradle
-      run: chmod +x ./gradlew
-
-    - name: Build Debug APK with Gradle
-      run: ./gradlew assembleDebug
-
-    - name: Move APK to Root Workspace
-      run: |
+        chmod +x ./gradlew
+        ./gradlew assembleDebug
         find . -name "*.apk" -exec cp {} ./app-debug.apk \;
-        ls -la ./app-debug.apk
-
-    - name: Upload Finished APK Artifacts
+    - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: QR-Scanner-Internal-Package
+        name: Face-Detector-APK
         path: ./app-debug.apk
